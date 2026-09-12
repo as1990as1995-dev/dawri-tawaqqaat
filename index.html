@@ -1,0 +1,19 @@
+<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>توقعات قروبنا</title>
+<style>body{font-family:Arial;background:#101827;color:#fff;padding:16px}.box{max-width:700px;margin:auto;background:#1d293b;padding:20px;border-radius:18px}h1{color:#f5c451;text-align:center}.game{background:#26364d;padding:12px;margin:8px 0;border-radius:10px}input,button,select{padding:10px;margin:4px;border-radius:8px;border:0;font-size:16px}button{background:#f5c451;font-weight:bold;cursor:pointer}.admin{display:none}.row{display:flex;gap:8px;flex-wrap:wrap}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ffffff22}</style>
+<div class=box><h1>🏆 توقعات قروبنا</h1>
+<p>اختر اسمك وسجل توقعات الجولة.</p><select id=user><option>احمد</option><option>مرعي</option><option>ابو يزن</option><option>ابو ميلا</option><option>الشيخ شامي</option><option>د علي</option><option>سعيد</option></select>
+<div id=games></div><button onclick=savePredictions()>حفظ التوقعات</button><p id=msg></p>
+<hr><button onclick=login()>دخول المشرف</button><div class=admin id=admin><h2>لوحة المشرف</h2><p>أدخل نتائج المباريات الثماني:</p><div id=results></div><button onclick=grade()>حساب النقاط وتحديث الترتيب</button></div>
+<h2>الترتيب</h2><table><thead><tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th></tr></thead><tbody id=ranking></tbody></table></div>
+<script>
+const names=['احمد','مرعي','ابو يزن','ابو ميلا','الشيخ شامي','د علي','سعيد'];
+const teams=[['النصر','الهلال'],['الاتحاد','الأهلي'],['الشباب','الاتفاق'],['القادسية','الرائد'],['التعاون','الفتح'],['الفيحاء','الخليج'],['الرياض','الوحدة'],['ضمك','الأخدود']];
+let preds={}, scores=Object.fromEntries(names.map(n=>[n,0]));
+games.innerHTML=teams.map((t,i)=>`<div class=game><b>${i+1}) ${t[0]} × ${t[1]}</b><br><input id=h${i} type=number min=0 placeholder='${t[0]}'> - <input id=a${i} type=number min=0 placeholder='${t[1]}'></div>`).join('');
+results.innerHTML=teams.map((t,i)=>`<div class=game>${i+1}) ${t[0]} × ${t[1]} <input id=rh${i} type=number min=0> - <input id=ra${i} type=number min=0></div>`).join('');
+function savePredictions(){let n=user.value;preds[n]=[];for(let i=0;i<8;i++){if(h(i).value===''||a(i).value===''){msg.textContent='أكمل المباريات الثماني';return}preds[n].push([+h(i).value,+a(i).value])}msg.textContent='تم حفظ توقعات '+n}
+function h(i){return document.getElementById('h'+i)}function a(i){return document.getElementById('a'+i)}
+function login(){if(prompt('الرقم السري المؤقت')==='135790')admin.style.display='block';else alert('الرقم غير صحيح')}
+function grade(){for(const n of names){let p=preds[n]||[],total=0;for(let i=0;i<8;i++){let x=+document.getElementById('rh'+i).value,y=+document.getElementById('ra'+i).value;if(!p[i])continue;let [ph,pa]=p[i];total+=ph===x&&pa===y?4:((ph>pa)==(x>y)||(ph===pa&&x===y))?2:0}scores[n]=total}render()}
+function render(){ranking.innerHTML=Object.entries(scores).sort((a,b)=>b[1]-a[1]).map((x,i)=>`<tr><td>${i+1}</td><td>${x[0]}</td><td>${x[1]}</td></tr>`).join('')}render();
+</script>
