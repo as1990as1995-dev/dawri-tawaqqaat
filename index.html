@@ -79,6 +79,13 @@
       <button id="saveResultsBtn">حفظ النتائج وتحديث الترتيب</button>
       <div id="resultMsg" class="msg"></div>
     </div>
+
+    <div class="card">
+      <h3>تصفير بيانات التجربة</h3>
+      <p class="muted">يحذف الجولة المختارة وتوقعاتها ونتائجها فقط، ولا يحذف أسماء المشاركين.</p>
+      <button id="resetRoundBtn" class="danger">حذف الجولة المختارة وتصفيرها</button>
+      <div id="resetRoundMsg" class="msg"></div>
+    </div>
   </div>
 
   <h2>الترتيب</h2>
@@ -89,7 +96,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, writeBatch, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBr8YglHrgdINrhar7x2kXplcTeJUvRVP8",
@@ -109,7 +116,7 @@
   const db = getFirestore(app);
 
   const $ = id => document.getElementById(id);
-  const userSelect=$('userSelect'), adminGames=$('adminGames'), newLockAt=$('newLockAt'), authState=$('authState'), adminPanel=$('adminPanel'), adminLoginBtn=$('adminLoginBtn'), roundSelect=$('roundSelect'), noRounds=$('noRounds'), savePredBtn=$('savePredBtn'), games=$('games'), resultsCard=$('resultsCard'), ranking=$('ranking'), newRoundNo=$('newRoundNo'), roundInfo=$('roundInfo'), memberMsg=$('memberMsg'), adminLoginBox=$('adminLoginBox'), cancelAdminLogin=$('cancelAdminLogin'), doAdminLogin=$('doAdminLogin'), loginMsg=$('loginMsg'), adminEmail=$('adminEmail'), adminPassword=$('adminPassword'), adminLogout=$('adminLogout'), createRoundBtn=$('createRoundBtn'), createRoundMsg=$('createRoundMsg'), results=$('results'), saveResultsBtn=$('saveResultsBtn'), resultMsg=$('resultMsg'), rankingNote=$('rankingNote');
+  const userSelect=$('userSelect'), adminGames=$('adminGames'), newLockAt=$('newLockAt'), authState=$('authState'), adminPanel=$('adminPanel'), adminLoginBtn=$('adminLoginBtn'), roundSelect=$('roundSelect'), noRounds=$('noRounds'), savePredBtn=$('savePredBtn'), games=$('games'), resultsCard=$('resultsCard'), ranking=$('ranking'), newRoundNo=$('newRoundNo'), roundInfo=$('roundInfo'), memberMsg=$('memberMsg'), adminLoginBox=$('adminLoginBox'), cancelAdminLogin=$('cancelAdminLogin'), doAdminLogin=$('doAdminLogin'), loginMsg=$('loginMsg'), adminEmail=$('adminEmail'), adminPassword=$('adminPassword'), adminLogout=$('adminLogout'), createRoundBtn=$('createRoundBtn'), createRoundMsg=$('createRoundMsg'), results=$('results'), saveResultsBtn=$('saveResultsBtn'), resultMsg=$('resultMsg'), rankingNote=$('rankingNote'), resetRoundBtn=$('resetRoundBtn'), resetRoundMsg=$('resetRoundMsg');
   let currentUser = null;
   let rounds = [];
   let currentRound = null;
@@ -248,6 +255,28 @@
       await updateDoc(doc(db,'rounds',currentRound.id),{results:res,resultsUpdatedAt:serverTimestamp(),resultsBy:currentUser.uid});
       currentRound.results=res; setMsg(resultMsg,'تم حفظ النتائج وتحديث الترتيب ✅'); await renderRanking();
     }catch(e){console.error(e);setMsg(resultMsg,'تعذر حفظ النتائج: '+friendlyError(e),false);}finally{saveResultsBtn.disabled=false;}
+  });
+
+  resetRoundBtn.addEventListener('click',async()=>{
+    if(!isAdmin()||!currentRound)return;
+    const roundId=currentRound.id;
+    const roundNo=currentRound.roundNo;
+    if(!confirm(`سيتم حذف الجولة ${roundNo} وجميع توقعاتها ونتائجها نهائيًا. هل أنت متأكد؟`))return;
+    try{
+      resetRoundBtn.disabled=true;
+      setMsg(resetRoundMsg,'جاري تصفير الجولة...');
+      const predictionsSnap=await getDocs(collection(db,'predictions',roundId,'users'));
+      const batch=writeBatch(db);
+      predictionsSnap.docs.forEach(prediction=>batch.delete(prediction.ref));
+      batch.delete(doc(db,'rounds',roundId));
+      await batch.commit();
+      currentRound=null;
+      setMsg(resetRoundMsg,`تم حذف الجولة ${roundNo} وتصفير بيانات التجربة ✅`);
+      await loadRounds();
+    }catch(e){
+      console.error(e);
+      setMsg(resetRoundMsg,'تعذر التصفير: '+friendlyError(e),false);
+    }finally{resetRoundBtn.disabled=false;}
   });
 
   async function renderRanking(){
