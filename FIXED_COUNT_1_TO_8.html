@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>دوري توقعات</title>
+  <style>
+    :root{--bg:#101827;--panel:#1d293b;--card:#26364d;--gold:#f5c451;--text:#fff;--muted:#b9c3d2;--ok:#4ade80;--bad:#fb7185}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,"Noto Sans Arabic",sans-serif;background:var(--bg);color:var(--text);padding:14px}
+    .box{max-width:760px;margin:auto;background:var(--panel);padding:18px;border-radius:18px;box-shadow:0 10px 30px #0005}
+    h1{color:var(--gold);text-align:center;margin:4px 0 8px} h2{margin:20px 0 10px} h3{margin:10px 0}
+    .muted{color:var(--muted);font-size:14px}.game,.card{background:var(--card);padding:12px;margin:9px 0;border-radius:12px}
+    input,button,select,textarea{padding:11px;margin:4px 0;border-radius:9px;border:0;font-size:16px;max-width:100%}
+    input,select,textarea{background:#fff;color:#111} button{background:var(--gold);font-weight:bold;cursor:pointer;color:#111}
+    button.secondary{background:#d9e2ef} button.danger{background:#fda4af} button:disabled{opacity:.55;cursor:not-allowed}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 150px}.score{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .score input{width:48%;min-width:0}.admin{display:none;border-top:1px solid #ffffff22;margin-top:18px;padding-top:14px}
+    .loginBox{display:none;background:#142033;padding:12px;border-radius:12px;margin-top:10px}
+    table{width:100%;border-collapse:collapse;background:#152237;border-radius:12px;overflow:hidden} td,th{padding:9px;border-bottom:1px solid #ffffff18;text-align:center}
+    .msg{min-height:24px;margin:8px 0}.ok{color:var(--ok)}.bad{color:var(--bad)}
+    .pill{display:inline-block;background:#0f172a;padding:5px 9px;border-radius:999px;font-size:13px;color:#d8e1ef}
+    .adminGame{display:grid;grid-template-columns:34px 1fr 1fr;gap:7px;align-items:center}.adminGame input{width:100%}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    .hidden{display:none!important}
+    @media(max-width:520px){body{padding:8px}.box{padding:13px}.adminGame{grid-template-columns:28px 1fr 1fr}.score{gap:5px}}
+  </style>
+</head>
+<body>
+<div class="box">
+  <h1>🏆 دوري توقعات</h1>
+  <div class="topbar">
+    <span id="authState" class="pill">جاري الاتصال...</span>
+    <button id="adminLoginBtn" class="secondary">دخول المشرف</button>
+  </div>
+
+  <div id="adminLoginBox" class="loginBox">
+    <h3>دخول المشرف</h3>
+    <div class="row">
+      <input id="adminEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="username">
+      <input id="adminPassword" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+    </div>
+    <div class="row">
+      <button id="doAdminLogin">دخول</button>
+      <button id="cancelAdminLogin" class="secondary">إلغاء</button>
+    </div>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+
+  <hr style="border-color:#ffffff22">
+  <div class="row">
+    <label>الجولة<br><select id="roundSelect"><option value="">جاري التحميل...</option></select></label>
+    <label>الاسم<br><select id="userSelect"></select></label>
+  </div>
+  <p id="roundInfo" class="muted"></p>
+
+  <div id="noRounds" class="card hidden">لا توجد جولة منشورة بعد. المشرف يستطيع إنشاء الجولة من لوحة المشرف.</div>
+  <div id="games"></div>
+  <button id="savePredBtn">حفظ التوقعات</button>
+  <div id="memberMsg" class="msg"></div>
+
+  <div id="adminPanel" class="admin">
+    <div class="topbar"><h2>لوحة المشرف</h2><button id="adminLogout" class="danger">خروج المشرف</button></div>
+
+    <div class="card">
+      <h3>إنشاء جولة جديدة</h3>
+      <div class="row">
+        <label>رقم الجولة<br><input id="newRoundNo" type="number" min="1" value="1"></label>
+        <label>عدد مباريات الجولة<br><input id="newGamesCount" type="number" min="1" max="8" value="8"></label>
+        <label>إغلاق التوقعات<br><input id="newLockAt" type="datetime-local"></label>
+      </div>
+      <p class="muted">اختر عدد المباريات الفعلي، وستظهر لك خاناتها فقط.</p>
+      <div id="adminGames"></div>
+      <button id="createRoundBtn">حفظ ونشر الجولة</button>
+      <div id="createRoundMsg" class="msg"></div>
+    </div>
+
+    <div id="resultsCard" class="card hidden">
+      <h3>نتائج الجولة المختارة</h3>
+      <div id="results"></div>
+      <button id="saveResultsBtn">حفظ النتائج وتحديث الترتيب</button>
+      <div id="resultMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>تصفير بيانات التجربة</h3>
+      <p class="muted">يحذف الجولة المختارة وتوقعاتها ونتائجها فقط، ولا يحذف أسماء المشاركين.</p>
+      <button id="resetRoundBtn" class="danger">حذف الجولة المختارة وتصفيرها</button>
+      <div id="resetRoundMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <h2>الترتيب العام</h2>
+  <p id="rankingNote" class="muted">يجمع النقاط تراكميًا ابتداءً من الجولة الثانية.</p>
+  <table><thead><tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th></tr></thead><tbody id="ranking"></tbody></table>
+
+  <h2>ترتيب الجولة المختارة</h2>
+  <p id="roundRankingNote" class="muted">اختر الجولة من القائمة لعرض ترتيبها.</p>
+  <table><thead><tr><th>الترتيب</th><th>الاسم</th><th>نقاط الجولة</th></tr></thead><tbody id="roundRanking"></tbody></table>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, writeBatch, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBr8YglHrgdINrhar7x2kXplcTeJUvRVP8",
+    authDomain: "dawri-tawaqqaat.firebaseapp.com",
+    projectId: "dawri-tawaqqaat",
+    storageBucket: "dawri-tawaqqaat.firebasestorage.app",
+    messagingSenderId: "263797942919",
+    appId: "1:263797942919:web:faf2ebfb8d58616c20e622"
+  };
+
+  const ADMIN_UID = "Pprml05e85ctTJWdLSivV5ANOMI3";
+  const defaultNames = ['احمد','مرعي','ابو يزن','ابو ميلا','الشيخ شامي','د علي','سعيد'];
+  const defaultTeams = [['النصر','الهلال'],['الاتحاد','الأهلي'],['الشباب','الاتفاق'],['القادسية','الرائد'],['التعاون','الفتح'],['الفيحاء','الخليج'],['الرياض','الوحدة'],['ضمك','الأخدود']];
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const $ = id => document.getElementById(id);
+  const userSelect=$('userSelect'), adminGames=$('adminGames'), newGamesCount=$('newGamesCount'), newLockAt=$('newLockAt'), authState=$('authState'), adminPanel=$('adminPanel'), adminLoginBtn=$('adminLoginBtn'), roundSelect=$('roundSelect'), noRounds=$('noRounds'), savePredBtn=$('savePredBtn'), games=$('games'), resultsCard=$('resultsCard'), ranking=$('ranking'), roundRanking=$('roundRanking'), newRoundNo=$('newRoundNo'), roundInfo=$('roundInfo'), memberMsg=$('memberMsg'), adminLoginBox=$('adminLoginBox'), cancelAdminLogin=$('cancelAdminLogin'), doAdminLogin=$('doAdminLogin'), loginMsg=$('loginMsg'), adminEmail=$('adminEmail'), adminPassword=$('adminPassword'), adminLogout=$('adminLogout'), createRoundBtn=$('createRoundBtn'), createRoundMsg=$('createRoundMsg'), results=$('results'), saveResultsBtn=$('saveResultsBtn'), resultMsg=$('resultMsg'), rankingNote=$('rankingNote'), roundRankingNote=$('roundRankingNote'), resetRoundBtn=$('resetRoundBtn'), resetRoundMsg=$('resetRoundMsg');
+  let currentUser = null;
+  let rounds = [];
+  let currentRound = null;
+
+  userSelect.innerHTML = defaultNames.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  function renderAdminGames(){
+    const count=Math.max(1,Math.min(8,Number(newGamesCount.value)||1));
+    const old=Array.from({length:8},(_,i)=>[$('ngh'+i)?.value,$('nga'+i)?.value]);
+    adminGames.innerHTML=defaultTeams.slice(0,count).map((t,i)=>`<div class="adminGame"><b>${i+1}</b><input id="ngh${i}" value="${escapeHtml(old[i]?.[0] ?? t[0])}" placeholder="الفريق الأول"><input id="nga${i}" value="${escapeHtml(old[i]?.[1] ?? t[1])}" placeholder="الفريق الثاني"></div>`).join('');
+  }
+  newGamesCount.addEventListener('change',renderAdminGames);
+  newGamesCount.addEventListener('input',renderAdminGames);
+  renderAdminGames();
+  setDefaultLockTime();
+
+  function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+  function setMsg(el,text,ok=true){el.textContent=text;el.className='msg '+(ok?'ok':'bad');}
+  function isAdmin(){return !!currentUser && currentUser.uid===ADMIN_UID;}
+  function setDefaultLockTime(){const d=new Date(Date.now()+24*60*60*1000);d.setMinutes(0,0,0);newLockAt.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+  function lockDate(round){return round?.lockAt?.toDate ? round.lockAt.toDate() : new Date(round?.lockAt||0);}
+  function isLocked(round){return !round || Date.now()>=lockDate(round).getTime();}
+
+  onAuthStateChanged(auth, async user => {
+    currentUser=user;
+    if(!user){
+      try{await signInAnonymously(auth);}catch(e){authState.textContent='تعذر تسجيل الدخول';console.error(e);}
+      return;
+    }
+    authState.textContent=isAdmin()?'المشرف متصل':'عضو متصل';
+    adminPanel.style.display=isAdmin()?'block':'none';
+    adminLoginBtn.style.display=isAdmin()?'none':'inline-block';
+    await loadRounds();
+    if(!isAdmin()) await loadMyProfile();
+  });
+
+  async function loadMyProfile(){
+    try{
+      const snap=await getDoc(doc(db,'users',currentUser.uid));
+      if(snap.exists() && snap.data().name && defaultNames.includes(snap.data().name)) userSelect.value=snap.data().name;
+    }catch(e){console.warn(e);}
+  }
+
+  async function loadRounds(){
+    try{
+      const snap=await getDocs(collection(db,'rounds'));
+      rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(b.roundNo)||0)-(Number(a.roundNo)||0));
+      roundSelect.innerHTML=rounds.length?rounds.map(r=>`<option value="${r.id}">الجولة ${escapeHtml(r.roundNo)}</option>`).join(''):'<option value="">لا توجد جولات</option>';
+      noRounds.classList.toggle('hidden',rounds.length>0);
+      savePredBtn.disabled=!rounds.length;
+      if(rounds.length){await selectRound(rounds[0].id);}else{currentRound=null;games.innerHTML='';resultsCard.classList.add('hidden');ranking.innerHTML='';}
+      if(isAdmin()) newRoundNo.value=(rounds.reduce((m,r)=>Math.max(m,Number(r.roundNo)||0),0)+1);
+    }catch(e){console.error(e);setMsg(memberMsg,'تعذر تحميل الجولات: '+friendlyError(e),false);}
+  }
+
+  roundSelect.addEventListener('change',()=>selectRound(roundSelect.value));
+  async function selectRound(id){
+    currentRound=rounds.find(r=>r.id===id)||null;
+    if(!currentRound)return;
+    roundSelect.value=id;
+    renderRound();
+    if(currentUser && !isAdmin()) await loadMyPrediction();
+    await renderRanking();
+  }
+
+  function renderRound(){
+    const r=currentRound; const locked=isLocked(r); const deadline=lockDate(r);
+    roundInfo.innerHTML=`الجولة <b>${escapeHtml(r.roundNo)}</b> — إغلاق التوقعات: <b>${deadline.toLocaleString('ar-SA')}</b> — ${locked?'<span class="bad">مغلقة</span>':'<span class="ok">مفتوحة</span>'}`;
+    const gs=Array.isArray(r.games)?r.games:[];
+    games.innerHTML=gs.map((g,i)=>`<div class="game"><b>${i+1}) ${escapeHtml(g.home)} × ${escapeHtml(g.away)}</b><div class="score"><input id="h${i}" type="number" min="0" inputmode="numeric" placeholder="${escapeHtml(g.home)}" ${locked?'disabled':''}><span>–</span><input id="a${i}" type="number" min="0" inputmode="numeric" placeholder="${escapeHtml(g.away)}" ${locked?'disabled':''}></div></div>`).join('');
+    savePredBtn.disabled=locked || !currentUser || isAdmin();
+    savePredBtn.textContent=locked?'انتهى وقت التوقع':'حفظ التوقعات';
+    if(isAdmin()) renderResultsForm();
+  }
+
+  async function loadMyPrediction(){
+    if(!currentRound||!currentUser)return;
+    try{
+      const snap=await getDoc(doc(db,'predictions',currentRound.id,'users',currentUser.uid));
+      if(!snap.exists())return;
+      const p=snap.data();
+      if(p.name && defaultNames.includes(p.name)) userSelect.value=p.name;
+      (p.scores||[]).forEach((s,i)=>{const h=$('h'+i),a=$('a'+i);if(h)h.value=s.home;if(a)a.value=s.away;});
+      setMsg(memberMsg,'تم تحميل توقعاتك المحفوظة.');
+    }catch(e){console.warn(e);}
+  }
+
+  savePredBtn.addEventListener('click',savePredictions);
+  async function savePredictions(){
+    if(!currentRound||!currentUser||isAdmin())return;
+    if(isLocked(currentRound)){setMsg(memberMsg,'انتهى وقت استقبال التوقعات.',false);return;}
+    const gs=currentRound.games||[]; const scores=[];
+    for(let i=0;i<gs.length;i++){
+      const hv=$('h'+i).value, av=$('a'+i).value;
+      if(hv===''||av===''){setMsg(memberMsg,'أكمل توقعات جميع مباريات الجولة.',false);return;}
+      scores.push({home:Number(hv),away:Number(av)});
+    }
+    try{
+      savePredBtn.disabled=true;
+      const name=userSelect.value;
+      await setDoc(doc(db,'users',currentUser.uid),{name,updatedAt:serverTimestamp()},{merge:true});
+      await setDoc(doc(db,'predictions',currentRound.id,'users',currentUser.uid),{uid:currentUser.uid,name,scores,savedAt:serverTimestamp()},{merge:true});
+      setMsg(memberMsg,'تم حفظ توقعات '+name+' بنجاح ✅');
+    }catch(e){console.error(e);setMsg(memberMsg,'لم يتم الحفظ: '+friendlyError(e),false);}finally{savePredBtn.disabled=isLocked(currentRound);}
+  }
+
+  adminLoginBtn.addEventListener('click',()=>adminLoginBox.style.display='block');
+  cancelAdminLogin.addEventListener('click',()=>adminLoginBox.style.display='none');
+  doAdminLogin.addEventListener('click',async()=>{
+    try{
+      setMsg(loginMsg,'جاري تسجيل الدخول...');
+      const cred=await signInWithEmailAndPassword(auth,adminEmail.value.trim(),adminPassword.value);
+      if(cred.user.uid!==ADMIN_UID){await signOut(auth);throw new Error('هذا الحساب ليس حساب المشرف المعتمد');}
+      adminPassword.value='';adminLoginBox.style.display='none';setMsg(loginMsg,'');
+    }catch(e){console.error(e);setMsg(loginMsg,'تعذر الدخول: '+friendlyError(e),false);}
+  });
+  adminLogout.addEventListener('click',async()=>{await signOut(auth);adminPanel.style.display='none';});
+
+  createRoundBtn.addEventListener('click',async()=>{
+    if(!isAdmin())return;
+    const no=Number(newRoundNo.value); const d=new Date(newLockAt.value);
+    if(!no||Number.isNaN(d.getTime())){setMsg(createRoundMsg,'أدخل رقم الجولة ووقت الإغلاق.',false);return;}
+    const count=Math.max(1,Math.min(8,Number(newGamesCount.value)||0));
+    if(!Number(newGamesCount.value)||Number(newGamesCount.value)<1||Number(newGamesCount.value)>8){setMsg(createRoundMsg,'اختر عدد المباريات من 1 إلى 8.',false);return;}
+    const g=[];
+    for(let i=0;i<count;i++){const home=$('ngh'+i).value.trim(),away=$('nga'+i).value.trim();if(!home||!away){setMsg(createRoundMsg,'أكمل أسماء الفرق في المباريات الظاهرة.',false);return;}g.push({home,away});}
+    try{
+      createRoundBtn.disabled=true;
+      await addDoc(collection(db,'rounds'),{roundNo:no,games:g,lockAt:Timestamp.fromDate(d),results:null,createdAt:serverTimestamp(),createdBy:currentUser.uid});
+      setMsg(createRoundMsg,'تم نشر الجولة بنجاح ✅');setDefaultLockTime();await loadRounds();
+    }catch(e){console.error(e);setMsg(createRoundMsg,'تعذر إنشاء الجولة: '+friendlyError(e),false);}finally{createRoundBtn.disabled=false;}
+  });
+
+  function renderResultsForm(){
+    if(!currentRound||!isAdmin()){resultsCard.classList.add('hidden');return;}
+    resultsCard.classList.remove('hidden'); const existing=Array.isArray(currentRound.results)?currentRound.results:[];
+    results.innerHTML=(currentRound.games||[]).map((g,i)=>`<div class="game"><b>${i+1}) ${escapeHtml(g.home)} × ${escapeHtml(g.away)}</b><div class="score"><input id="rh${i}" type="number" min="0" inputmode="numeric" value="${existing[i]?.home ?? ''}" placeholder="${escapeHtml(g.home)}"><span>–</span><input id="ra${i}" type="number" min="0" inputmode="numeric" value="${existing[i]?.away ?? ''}" placeholder="${escapeHtml(g.away)}"></div></div>`).join('');
+  }
+
+  saveResultsBtn.addEventListener('click',async()=>{
+    if(!isAdmin()||!currentRound)return;
+    const res=[];
+    for(let i=0;i<(currentRound.games||[]).length;i++){const h=$('rh'+i).value,a=$('ra'+i).value;if(h===''||a===''){setMsg(resultMsg,'أكمل نتائج جميع مباريات الجولة.',false);return;}res.push({home:Number(h),away:Number(a)});}
+    try{
+      saveResultsBtn.disabled=true;
+      await updateDoc(doc(db,'rounds',currentRound.id),{results:res,resultsUpdatedAt:serverTimestamp(),resultsBy:currentUser.uid});
+      currentRound.results=res; setMsg(resultMsg,'تم حفظ النتائج وتحديث الترتيب ✅'); await renderRanking();
+    }catch(e){console.error(e);setMsg(resultMsg,'تعذر حفظ النتائج: '+friendlyError(e),false);}finally{saveResultsBtn.disabled=false;}
+  });
+
+  resetRoundBtn.addEventListener('click',async()=>{
+    if(!isAdmin()||!currentRound)return;
+    const roundId=currentRound.id;
+    const roundNo=currentRound.roundNo;
+    if(!confirm(`سيتم حذف الجولة ${roundNo} وجميع توقعاتها ونتائجها نهائيًا. هل أنت متأكد؟`))return;
+    try{
+      resetRoundBtn.disabled=true;
+      setMsg(resetRoundMsg,'جاري تصفير الجولة...');
+      const predictionsSnap=await getDocs(collection(db,'predictions',roundId,'users'));
+      const batch=writeBatch(db);
+      predictionsSnap.docs.forEach(prediction=>batch.delete(prediction.ref));
+      batch.delete(doc(db,'rounds',roundId));
+      await batch.commit();
+      currentRound=null;
+      setMsg(resetRoundMsg,`تم حذف الجولة ${roundNo} وتصفير بيانات التجربة ✅`);
+      await loadRounds();
+    }catch(e){
+      console.error(e);
+      setMsg(resetRoundMsg,'تعذر التصفير: '+friendlyError(e),false);
+    }finally{resetRoundBtn.disabled=false;}
+  });
+
+  async function renderRanking(){
+    ranking.innerHTML='';
+    roundRanking.innerHTML='';
+    const completedRounds=rounds.filter(r=>Number(r.roundNo)>=2 && Array.isArray(r.results) && (isAdmin() || isLocked(r)));
+    if(!completedRounds.length) rankingNote.textContent='يظهر الترتيب العام بعد إغلاق الجولة الثانية وإدخال نتائجها.';
+    try{
+      const totals=new Map();
+      for(const round of completedRounds){
+        const snap=await getDocs(collection(db,'predictions',round.id,'users'));
+        const latestByName=new Map();
+        snap.docs.forEach(d=>{
+          const p=d.data();
+          const name=(p.name||'عضو').trim();
+          const savedAt=p.savedAt?.toMillis ? p.savedAt.toMillis() : 0;
+          const previous=latestByName.get(name);
+          if(!previous || savedAt>=previous.savedAt) latestByName.set(name,{scores:p.scores||[],savedAt});
+        });
+        latestByName.forEach((p,name)=>totals.set(name,(totals.get(name)||0)+calcPoints(p.scores,round.results)));
+      }
+      const rows=[...totals.entries()].map(([name,points])=>({name,points})).sort((a,b)=>b.points-a.points || a.name.localeCompare(b.name,'ar'));
+      rankingNote.textContent=rows.length?`الترتيب العام التراكمي من الجولة الثانية (${completedRounds.length} ${completedRounds.length===1?'جولة مكتملة':'جولات مكتملة'})`:'لا توجد توقعات محفوظة ابتداءً من الجولة الثانية.';
+      ranking.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(r.name)}</td><td>${r.points}</td></tr>`).join('');
+
+      if(!currentRound){roundRankingNote.textContent='لا توجد جولة مختارة.';return;}
+      if(!Array.isArray(currentRound.results)){roundRankingNote.textContent='لم يتم إدخال نتائج هذه الجولة بعد.';return;}
+      if(!isAdmin() && !isLocked(currentRound)){roundRankingNote.textContent='يظهر ترتيب الجولة بعد إغلاقها.';return;}
+      const roundSnap=await getDocs(collection(db,'predictions',currentRound.id,'users'));
+      const latestRoundPredictions=new Map();
+      roundSnap.docs.forEach(d=>{
+        const p=d.data();
+        const name=(p.name||'عضو').trim();
+        const savedAt=p.savedAt?.toMillis ? p.savedAt.toMillis() : 0;
+        const previous=latestRoundPredictions.get(name);
+        if(!previous || savedAt>=previous.savedAt) latestRoundPredictions.set(name,{scores:p.scores||[],savedAt});
+      });
+      const roundRows=[...latestRoundPredictions.entries()].map(([name,p])=>({name,points:calcPoints(p.scores,currentRound.results)})).sort((a,b)=>b.points-a.points || a.name.localeCompare(b.name,'ar'));
+      roundRankingNote.textContent=roundRows.length?'ترتيب الجولة '+currentRound.roundNo:'لا توجد توقعات محفوظة لهذه الجولة.';
+      roundRanking.innerHTML=roundRows.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(r.name)}</td><td>${r.points}</td></tr>`).join('');
+    }catch(e){console.error(e);rankingNote.textContent='لا يمكن عرض الترتيب الآن: '+friendlyError(e);}
+  }
+
+  function calcPoints(pred,res){
+    let total=0; for(let i=0;i<res.length;i++){if(!pred[i])continue;const ph=Number(pred[i].home),pa=Number(pred[i].away),x=Number(res[i].home),y=Number(res[i].away);if(ph===x&&pa===y)total+=4;else if(outcome(ph,pa)===outcome(x,y))total+=2;}return total;
+  }
+  function outcome(h,a){return h>a?'H':h<a?'A':'D';}
+  function friendlyError(e){const c=e?.code||'';if(c.includes('wrong-password')||c.includes('invalid-credential'))return 'البريد أو كلمة المرور غير صحيحة';if(c.includes('permission-denied'))return 'لا توجد صلاحية لهذه العملية';if(c.includes('network'))return 'تحقق من اتصال الإنترنت';return e?.message||'خطأ غير معروف';}
+</script>
+</body>
+</html>
