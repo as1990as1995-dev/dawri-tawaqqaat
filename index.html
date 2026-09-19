@@ -65,10 +65,9 @@
       <h3>إنشاء جولة جديدة</h3>
       <div class="row">
         <label>رقم الجولة<br><input id="newRoundNo" type="number" min="1" value="1"></label>
-        <label>عدد مباريات الجولة<br><input id="newGamesCount" type="number" min="1" max="8" value="8"></label>
         <label>إغلاق التوقعات<br><input id="newLockAt" type="datetime-local"></label>
       </div>
-      <p class="muted">اختر عدد المباريات الفعلي، وستظهر لك خاناتها فقط.</p>
+      <p class="muted">اكتب 8 مباريات. يمكنك تغيير الفرق في كل جولة.</p>
       <div id="adminGames"></div>
       <button id="createRoundBtn">حفظ ونشر الجولة</button>
       <div id="createRoundMsg" class="msg"></div>
@@ -117,20 +116,13 @@
   const db = getFirestore(app);
 
   const $ = id => document.getElementById(id);
-  const userSelect=$('userSelect'), adminGames=$('adminGames'), newGamesCount=$('newGamesCount'), newLockAt=$('newLockAt'), authState=$('authState'), adminPanel=$('adminPanel'), adminLoginBtn=$('adminLoginBtn'), roundSelect=$('roundSelect'), noRounds=$('noRounds'), savePredBtn=$('savePredBtn'), games=$('games'), resultsCard=$('resultsCard'), ranking=$('ranking'), newRoundNo=$('newRoundNo'), roundInfo=$('roundInfo'), memberMsg=$('memberMsg'), adminLoginBox=$('adminLoginBox'), cancelAdminLogin=$('cancelAdminLogin'), doAdminLogin=$('doAdminLogin'), loginMsg=$('loginMsg'), adminEmail=$('adminEmail'), adminPassword=$('adminPassword'), adminLogout=$('adminLogout'), createRoundBtn=$('createRoundBtn'), createRoundMsg=$('createRoundMsg'), results=$('results'), saveResultsBtn=$('saveResultsBtn'), resultMsg=$('resultMsg'), rankingNote=$('rankingNote'), resetRoundBtn=$('resetRoundBtn'), resetRoundMsg=$('resetRoundMsg');
+  const userSelect=$('userSelect'), adminGames=$('adminGames'), newLockAt=$('newLockAt'), authState=$('authState'), adminPanel=$('adminPanel'), adminLoginBtn=$('adminLoginBtn'), roundSelect=$('roundSelect'), noRounds=$('noRounds'), savePredBtn=$('savePredBtn'), games=$('games'), resultsCard=$('resultsCard'), ranking=$('ranking'), newRoundNo=$('newRoundNo'), roundInfo=$('roundInfo'), memberMsg=$('memberMsg'), adminLoginBox=$('adminLoginBox'), cancelAdminLogin=$('cancelAdminLogin'), doAdminLogin=$('doAdminLogin'), loginMsg=$('loginMsg'), adminEmail=$('adminEmail'), adminPassword=$('adminPassword'), adminLogout=$('adminLogout'), createRoundBtn=$('createRoundBtn'), createRoundMsg=$('createRoundMsg'), results=$('results'), saveResultsBtn=$('saveResultsBtn'), resultMsg=$('resultMsg'), rankingNote=$('rankingNote'), resetRoundBtn=$('resetRoundBtn'), resetRoundMsg=$('resetRoundMsg');
   let currentUser = null;
   let rounds = [];
   let currentRound = null;
 
   userSelect.innerHTML = defaultNames.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-  function renderAdminGames(){
-    const count=Math.max(1,Math.min(8,Number(newGamesCount.value)||1));
-    const old=Array.from({length:8},(_,i)=>[$('ngh'+i)?.value,$('nga'+i)?.value]);
-    adminGames.innerHTML=defaultTeams.slice(0,count).map((t,i)=>`<div class="adminGame"><b>${i+1}</b><input id="ngh${i}" value="${escapeHtml(old[i]?.[0] ?? t[0])}" placeholder="الفريق الأول"><input id="nga${i}" value="${escapeHtml(old[i]?.[1] ?? t[1])}" placeholder="الفريق الثاني"></div>`).join('');
-  }
-  newGamesCount.addEventListener('change',renderAdminGames);
-  newGamesCount.addEventListener('input',renderAdminGames);
-  renderAdminGames();
+  adminGames.innerHTML = defaultTeams.map((t,i)=>`<div class="adminGame"><b>${i+1}</b><input id="ngh${i}" value="${t[0]}" placeholder="الفريق الأول"><input id="nga${i}" value="${t[1]}" placeholder="الفريق الثاني"></div>`).join('');
   setDefaultLockTime();
 
   function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
@@ -211,7 +203,7 @@
     const gs=currentRound.games||[]; const scores=[];
     for(let i=0;i<gs.length;i++){
       const hv=$('h'+i).value, av=$('a'+i).value;
-      if(hv===''||av===''){setMsg(memberMsg,'أكمل توقعات جميع مباريات الجولة.',false);return;}
+      if(hv===''||av===''){setMsg(memberMsg,'أكمل توقعات المباريات الثماني.',false);return;}
       scores.push({home:Number(hv),away:Number(av)});
     }
     try{
@@ -239,10 +231,8 @@
     if(!isAdmin())return;
     const no=Number(newRoundNo.value); const d=new Date(newLockAt.value);
     if(!no||Number.isNaN(d.getTime())){setMsg(createRoundMsg,'أدخل رقم الجولة ووقت الإغلاق.',false);return;}
-    const count=Math.max(1,Math.min(8,Number(newGamesCount.value)||0));
-    if(!Number(newGamesCount.value)||Number(newGamesCount.value)<1||Number(newGamesCount.value)>8){setMsg(createRoundMsg,'اختر عدد المباريات من 1 إلى 8.',false);return;}
     const g=[];
-    for(let i=0;i<count;i++){const home=$('ngh'+i).value.trim(),away=$('nga'+i).value.trim();if(!home||!away){setMsg(createRoundMsg,'أكمل أسماء الفرق في المباريات الظاهرة.',false);return;}g.push({home,away});}
+    for(let i=0;i<8;i++){const home=$('ngh'+i).value.trim(),away=$('nga'+i).value.trim();if(!home||!away){setMsg(createRoundMsg,'أكمل أسماء الفرق في المباريات الثماني.',false);return;}g.push({home,away});}
     try{
       createRoundBtn.disabled=true;
       await addDoc(collection(db,'rounds'),{roundNo:no,games:g,lockAt:Timestamp.fromDate(d),results:null,createdAt:serverTimestamp(),createdBy:currentUser.uid});
@@ -259,7 +249,7 @@
   saveResultsBtn.addEventListener('click',async()=>{
     if(!isAdmin()||!currentRound)return;
     const res=[];
-    for(let i=0;i<(currentRound.games||[]).length;i++){const h=$('rh'+i).value,a=$('ra'+i).value;if(h===''||a===''){setMsg(resultMsg,'أكمل نتائج جميع مباريات الجولة.',false);return;}res.push({home:Number(h),away:Number(a)});}
+    for(let i=0;i<(currentRound.games||[]).length;i++){const h=$('rh'+i).value,a=$('ra'+i).value;if(h===''||a===''){setMsg(resultMsg,'أكمل نتائج المباريات الثماني.',false);return;}res.push({home:Number(h),away:Number(a)});}
     try{
       saveResultsBtn.disabled=true;
       await updateDoc(doc(db,'rounds',currentRound.id),{results:res,resultsUpdatedAt:serverTimestamp(),resultsBy:currentUser.uid});
